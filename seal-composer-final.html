@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>書法全景定位工具-最終完整版</title>
+    <title>書法印章合成工具</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
     <style>
         :root { --primary: #007AFF; --accent: #FF3B30; }
@@ -14,14 +14,17 @@
         label.green { background: #34C759; }
         input[type="file"] { display: none; }
         #viewport { flex: 1; display: flex; justify-content: center; align-items: center; overflow: auto; padding: 20px; background: radial-gradient(#3a3a3c, #1c1c1e); }
-        .footer { background: #1c1c1e; padding: 15px 20px 30px 20px; border-top: 1px solid #3a3a3c; }
-        .tool-row { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
-        .tool-row span { font-size: 13px; color: #aeaeb2; min-width: 60px; }
-        input[type="range"] { flex: 1; }
+        .footer { background: #1c1c1e; padding: 12px 20px 30px 20px; border-top: 1px solid #3a3a3c; }
+        .tool-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .tool-row span { font-size: 13px; color: #aeaeb2; min-width: 55px; }
+        input[type="range"] { flex: 1; min-width: 80px; }
         #download-btn { background: var(--accent); color: white; border: none; width: 100%; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .mode-switch { margin-bottom: 10px; display: flex; background: #3a3a3c; border-radius: 8px; padding: 2px; }
         .mode-btn { flex: 1; padding: 8px; border: none; background: none; color: #aeaeb2; cursor: pointer; font-size: 12px; border-radius: 6px; }
         .mode-btn.active { background: #636366; color: white; }
+        #apply-color-btn { background: #636366; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+        #apply-color-btn:active { background: #888; }
+        #status-msg { font-size: 11px; color: #aeaeb2; text-align: center; margin-bottom: 6px; min-height: 16px; }
     </style>
 </head>
 <body>
@@ -40,6 +43,7 @@
 </div>
 
 <div class="footer">
+    <div id="status-msg"></div>
     <div class="mode-switch">
         <button class="mode-btn active" id="btn-fit" onclick="setZoomMode('fit')">🔭 全景模式</button>
         <button class="mode-btn" id="btn-orig" onclick="setZoomMode('original')">🔍 1:1 模式</button>
@@ -47,6 +51,7 @@
     <div class="tool-row">
         <span>印章顏色</span>
         <input type="color" id="color-picker" value="#C41E3A">
+        <button id="apply-color-btn">套用顏色</button>
         <span>透明度</span>
         <input type="range" id="opacity-slider" min="0.1" max="1" step="0.1" value="1">
     </div>
@@ -57,27 +62,46 @@
     const canvas = new fabric.Canvas('main-canvas');
     let originalImg = null;
     let currentMode = 'fit';
+    const MAX_SIZE = 2000;
+
+    function setStatus(msg) {
+        document.getElementById('status-msg').textContent = msg;
+    }
+
+    function resizeImageIfNeeded(dataUrl, maxSize, callback) {
+        const img = new Image();
+        img.onload = function() {
+            const w = img.width, h = img.height;
+            if (w <= maxSize && h <= maxSize) { callback(dataUrl, w, h); return; }
+            const scale = Math.min(maxSize / w, maxSize / h);
+            const newW = Math.round(w * scale), newH = Math.round(h * scale);
+            const c = document.createElement('canvas');
+            c.width = newW; c.height = newH;
+            c.getContext('2d').drawImage(img, 0, 0, newW, newH);
+            callback(c.toDataURL('image/jpeg', 0.92), newW, newH);
+        };
+        img.src = dataUrl;
+    }
 
     document.getElementById('bg-input').onchange = function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+        const file = e.target.files[0]; if (!file) return;
+        setStatus('載入中…');
         const reader = new FileReader();
         reader.onload = function(f) {
-            fabric.Image.fromURL(f.target.result, function(img) {
-                originalImg = img;
-                renderCanvas();
+            resizeImageIfNeeded(f.target.result, MAX_SIZE, function(resizedUrl) {
+                fabric.Image.fromURL(resizedUrl, function(img) {
+                    originalImg = img; renderCanvas(); setStatus('作品已載入 ✓');
+                });
             });
         };
-        reader.readAsDataURL(file);
-        this.value = '';
+        reader.readAsDataURL(file); this.value = '';
     };
 
     function renderCanvas() {
         if (!originalImg) return;
         const vW = window.innerWidth - 40;
         const vH = document.getElementById('viewport').clientHeight - 40;
-        const imgW = originalImg.width;
-        const imgH = originalImg.height;
+        const imgW = originalImg.width, imgH = originalImg.height;
         let scale = (currentMode === 'fit') ? Math.min(vW / imgW, vH / imgH) : vW / imgW;
         canvas.setDimensions({ width: imgW * scale, height: imgH * scale });
         canvas.setBackgroundImage(originalImg, canvas.renderAll.bind(canvas), { scaleX: scale, scaleY: scale });
@@ -91,92 +115,74 @@
     }
 
     document.getElementById('fg-input').onchange = function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+        const file = e.target.files[0]; if (!file) return;
+        setStatus('印章載入中…');
         const reader = new FileReader();
         reader.onload = function(f) {
-            const imgElement = new Image();
-            imgElement.src = f.target.result;
-            imgElement.onload = function() {
-                const tempCanvas = document.createElement('canvas');
-                const tCtx = tempCanvas.getContext('2d');
-                tempCanvas.width = imgElement.width;
-                tempCanvas.height = imgElement.height;
-                tCtx.drawImage(imgElement, 0, 0);
-
-                const imgData = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-                for (let i = 0; i < imgData.data.length; i += 4) {
-                    if (imgData.data[i] > 190 && imgData.data[i+1] > 190 && imgData.data[i+2] > 190) imgData.data[i+3] = 0;
-                }
-                tCtx.putImageData(imgData, 0, 0);
-
-                fabric.Image.fromURL(tempCanvas.toDataURL(), function(stamp) {
-                    stamp.scaleToWidth(canvas.width * 0.1);
-                    stamp.set({
-                        left: canvas.width / 2, top: canvas.height / 2,
-                        cornerSize: 8, transparentCorners: false, cornerColor: '#007AFF',
-                        lockScalingFlip: true, lockUniScaling: true, hasRotatingPoint: true, rotatingPointOffset: 20
+            resizeImageIfNeeded(f.target.result, MAX_SIZE, function(resizedUrl) {
+                const imgElement = new Image();
+                imgElement.src = resizedUrl;
+                imgElement.onload = function() {
+                    const tempCanvas = document.createElement('canvas');
+                    const tCtx = tempCanvas.getContext('2d');
+                    tempCanvas.width = imgElement.width; tempCanvas.height = imgElement.height;
+                    tCtx.drawImage(imgElement, 0, 0);
+                    const imgData = tCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                    const d = imgData.data;
+                    for (let i = 0; i < d.length; i += 4) {
+                        if (d[i] > 190 && d[i+1] > 190 && d[i+2] > 190) d[i+3] = 0;
+                    }
+                    tCtx.putImageData(imgData, 0, 0);
+                    fabric.Image.fromURL(tempCanvas.toDataURL(), function(stamp) {
+                        stamp.scaleToWidth(canvas.width * 0.15);
+                        stamp.set({ left: canvas.width / 2, top: canvas.height / 2, cornerSize: 8, transparentCorners: false, cornerColor: '#007AFF', lockScalingFlip: true, lockUniScaling: true, hasRotatingPoint: true, rotatingPointOffset: 20 });
+                        stamp.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
+                        canvas.add(stamp); canvas.setActiveObject(stamp);
+                        setStatus('印章已載入 ✓ 可拖曳調整位置');
                     });
-                    stamp.setControlsVisibility({ mt: false, mb: false, ml: false, mr: false });
-                    canvas.add(stamp);
-                    canvas.setActiveObject(stamp);
-                    applyColor(stamp);
-                });
-            };
+                };
+            });
         };
-        reader.readAsDataURL(file);
-        this.value = '';
+        reader.readAsDataURL(file); this.value = '';
     };
 
     function applyColor(obj) {
         if (!obj || !obj.isType('image')) return;
-        obj.filters = [new fabric.Image.filters.BlendColor({
-            color: document.getElementById('color-picker').value,
-            mode: 'tint', alpha: 1
-        })];
-        obj.applyFilters();
-        canvas.renderAll();
+        obj.filters = [new fabric.Image.filters.BlendColor({ color: document.getElementById('color-picker').value, mode: 'tint', alpha: 1 })];
+        obj.applyFilters(); canvas.renderAll(); setStatus('顏色已套用 ✓');
     }
 
-    document.getElementById('color-picker').oninput = () => applyColor(canvas.getActiveObject());
+    document.getElementById('apply-color-btn').onclick = function() {
+        const obj = canvas.getActiveObject();
+        if (!obj) { setStatus('請先點選印章'); return; }
+        applyColor(obj);
+    };
+
     document.getElementById('opacity-slider').oninput = function() {
         const obj = canvas.getActiveObject();
-        if(obj) { obj.set('opacity', parseFloat(this.value)); canvas.renderAll(); }
+        if (obj) { obj.set('opacity', parseFloat(this.value)); canvas.renderAll(); }
     };
 
     document.getElementById('download-btn').onclick = function() {
-        if (!originalImg) return;
-
-        // 用原生 canvas 合成，避免 iframe 跨域限制
+        if (!originalImg) { setStatus('請先載入作品'); return; }
+        setStatus('合成中…');
         const multiplier = originalImg.width / canvas.width;
-        const outW = Math.round(canvas.width * multiplier);
-        const outH = Math.round(canvas.height * multiplier);
-
+        const outW = Math.round(canvas.width * multiplier), outH = Math.round(canvas.height * multiplier);
         const outCanvas = document.createElement('canvas');
-        outCanvas.width = outW;
-        outCanvas.height = outH;
+        outCanvas.width = outW; outCanvas.height = outH;
         const ctx = outCanvas.getContext('2d');
-
-        // 畫底圖
         ctx.drawImage(originalImg.getElement(), 0, 0, outW, outH);
-
-        // 畫每個印章物件
         canvas.getObjects().forEach(function(obj) {
             if (!obj.isType('image')) return;
             const el = obj.getElement();
-            const scaleX = obj.scaleX * multiplier;
-            const scaleY = obj.scaleY * multiplier;
-            const left = obj.left * multiplier;
-            const top = obj.top * multiplier;
-            const w = el.naturalWidth || el.width;
-            const h = el.naturalHeight || el.height;
+            const scaleX = obj.scaleX * multiplier, scaleY = obj.scaleY * multiplier;
+            const left = obj.left * multiplier, top = obj.top * multiplier;
+            const w = el.naturalWidth || el.width, h = el.naturalHeight || el.height;
             ctx.globalAlpha = obj.opacity;
             ctx.drawImage(el, left, top, w * scaleX, h * scaleY);
         });
         ctx.globalAlpha = 1;
-
         const dataURL = outCanvas.toDataURL('image/png');
-
         if (/iPhone|iPad/i.test(navigator.userAgent)) {
             const win = window.open();
             win.document.write('<img src="' + dataURL + '" style="max-width:100%">');
@@ -184,9 +190,9 @@
         } else {
             const link = document.createElement('a');
             link.download = '書法成品_' + new Date().getTime() + '.png';
-            link.href = dataURL;
-            link.click();
+            link.href = dataURL; link.click();
         }
+        setStatus('導出完成 ✓');
     };
 
     window.onresize = renderCanvas;
