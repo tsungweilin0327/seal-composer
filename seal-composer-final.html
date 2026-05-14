@@ -30,20 +30,17 @@
 <body>
 
 <div class="header">
-    <!-- 第一列：載入按鈕 -->
     <div class="row1">
         <label class="blue" for="bg-input">🖼️ 載入作品</label>
         <input type="file" id="bg-input" accept="image/*">
         <label class="green" for="fg-input">🧧 載入印章</label>
         <input type="file" id="fg-input" accept="image/*">
     </div>
-    <!-- 第二列：模式 + 導出 -->
     <div class="row2">
         <button class="mode-btn active" id="btn-fit" onclick="setZoomMode('fit')">🔭 全景</button>
         <button class="mode-btn" id="btn-orig" onclick="setZoomMode('original')">🔍 1:1</button>
         <button id="download-btn">✅ 導出作品</button>
     </div>
-    <!-- 第三列：印章工具 -->
     <div class="row3">
         <span class="label-sm">印章顏色</span>
         <input type="color" id="color-picker" value="#C41E3A">
@@ -63,6 +60,10 @@
     let originalImg = null;
     let currentMode = 'fit';
     const MAX_SIZE = 2000;
+
+    // 判斷裝置類型
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
     function setStatus(msg) {
         document.getElementById('status-msg').textContent = msg;
@@ -99,10 +100,15 @@
 
     function renderCanvas() {
         if (!originalImg) return;
-        const vW = window.innerWidth - 30;
+        const headerH = document.querySelector('.header').offsetHeight;
+        const availW = window.innerWidth - 30;
+        const availH = window.innerHeight - headerH - 30;
         const imgW = originalImg.width, imgH = originalImg.height;
-        const scale = (currentMode === 'fit') ? vW / imgW : vW / imgW;
-        canvas.setDimensions({ width: imgW * scale, height: imgH * scale });
+        // 全景模式同時考慮寬高，確保完整全貌
+        const scale = (currentMode === 'fit')
+            ? Math.min(availW / imgW, availH / imgH)
+            : availW / imgW;
+        canvas.setDimensions({ width: Math.round(imgW * scale), height: Math.round(imgH * scale) });
         canvas.setBackgroundImage(originalImg, canvas.renderAll.bind(canvas), { scaleX: scale, scaleY: scale });
     }
 
@@ -182,7 +188,8 @@
         });
         ctx.globalAlpha = 1;
         const dataURL = outCanvas.toDataURL('image/png');
-        if (/iPhone|iPad/i.test(navigator.userAgent)) {
+        // 手機和平板（含新版 iPad）開新分頁長按儲存，電腦直接下載
+        if (isIOS) {
             const win = window.open();
             win.document.write('<img src="' + dataURL + '" style="max-width:100%">');
             win.document.title = '長按圖片儲存到相簿';
