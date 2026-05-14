@@ -6,56 +6,56 @@
     <title>書法印章合成工具</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
     <style>
-        :root { --primary: #007AFF; --accent: #FF3B30; }
         * { box-sizing: border-box; }
-        body { font-family: -apple-system, sans-serif; background: #2c2c2e; margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 100vh; color: white; }
-        .header { background: #1c1c1e; padding: 12px 15px; z-index: 10; border-bottom: 1px solid #3a3a3c; }
-        .upload-btns { display: flex; gap: 10px; }
-        label { flex: 1; background: var(--primary); padding: 12px; border-radius: 8px; cursor: pointer; text-align: center; font-weight: bold; font-size: 14px; }
+        body { font-family: -apple-system, sans-serif; background: #2c2c2e; margin: 0; padding: 0; color: white; }
+        .header { background: #1c1c1e; padding: 10px 12px; border-bottom: 1px solid #3a3a3c; position: sticky; top: 0; z-index: 100; }
+        .row1 { display: flex; gap: 8px; margin-bottom: 8px; }
+        .row2 { display: flex; gap: 6px; margin-bottom: 8px; }
+        .row3 { display: flex; align-items: center; gap: 6px; }
+        .status { font-size: 10px; color: #aeaeb2; text-align: center; margin-top: 5px; min-height: 14px; }
+        label { flex: 1; padding: 9px; border-radius: 7px; cursor: pointer; text-align: center; font-weight: bold; font-size: 12px; }
+        label.blue { background: #007AFF; }
         label.green { background: #34C759; }
         input[type="file"] { display: none; }
-        #viewport { display: flex; justify-content: center; align-items: center; padding: 15px; background: radial-gradient(#3a3a3c, #1c1c1e); }
-        .footer { background: #1c1c1e; padding: 12px 15px 20px 15px; border-top: 1px solid #3a3a3c; }
-        .tool-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-        .tool-row span { font-size: 12px; color: #aeaeb2; min-width: 50px; }
-        input[type="range"] { flex: 1; min-width: 80px; }
-        #download-btn { background: var(--accent); color: white; border: none; width: 100%; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 4px; }
-        .mode-switch { margin-bottom: 8px; display: flex; background: #3a3a3c; border-radius: 8px; padding: 2px; }
-        .mode-btn { flex: 1; padding: 7px; border: none; background: none; color: #aeaeb2; cursor: pointer; font-size: 12px; border-radius: 6px; }
-        .mode-btn.active { background: #636366; color: white; }
-        #apply-color-btn { background: #636366; color: white; border: none; padding: 7px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
-        #status-msg { font-size: 11px; color: #aeaeb2; text-align: center; margin-bottom: 4px; min-height: 14px; }
+        .mode-btn { flex: 1; padding: 6px; border: 1px solid #3a3a3c; background: none; color: #aeaeb2; cursor: pointer; font-size: 11px; border-radius: 6px; }
+        .mode-btn.active { background: #3a3a3c; color: white; border-color: #3a3a3c; }
+        #download-btn { flex: 1.5; padding: 6px; background: #FF3B30; color: white; border: none; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; }
+        #apply-color-btn { background: #636366; color: white; border: none; padding: 5px 8px; border-radius: 5px; font-size: 11px; cursor: pointer; white-space: nowrap; }
+        .label-sm { font-size: 11px; color: #aeaeb2; white-space: nowrap; }
+        input[type="color"] { width: 24px; height: 24px; border-radius: 4px; border: 1px solid #555; padding: 0; cursor: pointer; flex-shrink: 0; }
+        input[type="range"] { flex: 1; min-width: 40px; }
+        #viewport { padding: 15px; display: flex; justify-content: center; align-items: flex-start; background: radial-gradient(#3a3a3c, #1c1c1e); min-height: calc(100vh - 130px); }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <div class="upload-btns">
-        <label for="bg-input">🖼️ 載入作品</label>
+    <!-- 第一列：載入按鈕 -->
+    <div class="row1">
+        <label class="blue" for="bg-input">🖼️ 載入作品</label>
         <input type="file" id="bg-input" accept="image/*">
-        <label for="fg-input" class="green">🧧 載入印章</label>
+        <label class="green" for="fg-input">🧧 載入印章</label>
         <input type="file" id="fg-input" accept="image/*">
     </div>
+    <!-- 第二列：模式 + 導出 -->
+    <div class="row2">
+        <button class="mode-btn active" id="btn-fit" onclick="setZoomMode('fit')">🔭 全景</button>
+        <button class="mode-btn" id="btn-orig" onclick="setZoomMode('original')">🔍 1:1</button>
+        <button id="download-btn">✅ 導出作品</button>
+    </div>
+    <!-- 第三列：印章工具 -->
+    <div class="row3">
+        <span class="label-sm">印章顏色</span>
+        <input type="color" id="color-picker" value="#C41E3A">
+        <button id="apply-color-btn">套用</button>
+        <span class="label-sm">透明度</span>
+        <input type="range" id="opacity-slider" min="0.1" max="1" step="0.1" value="1">
+    </div>
+    <div class="status" id="status-msg"></div>
 </div>
 
 <div id="viewport">
     <canvas id="main-canvas"></canvas>
-</div>
-
-<div class="footer">
-    <div id="status-msg"></div>
-    <div class="mode-switch">
-        <button class="mode-btn active" id="btn-fit" onclick="setZoomMode('fit')">🔭 全景模式</button>
-        <button class="mode-btn" id="btn-orig" onclick="setZoomMode('original')">🔍 1:1 模式</button>
-    </div>
-    <div class="tool-row">
-        <span>印章顏色</span>
-        <input type="color" id="color-picker" value="#C41E3A">
-        <button id="apply-color-btn">套用顏色</button>
-        <span>透明度</span>
-        <input type="range" id="opacity-slider" min="0.1" max="1" step="0.1" value="1">
-    </div>
-    <button id="download-btn">✅ 完成並導出作品</button>
 </div>
 
 <script>
@@ -101,7 +101,7 @@
         if (!originalImg) return;
         const vW = window.innerWidth - 30;
         const imgW = originalImg.width, imgH = originalImg.height;
-        let scale = (currentMode === 'fit') ? vW / imgW : vW / imgW;
+        const scale = (currentMode === 'fit') ? vW / imgW : vW / imgW;
         canvas.setDimensions({ width: imgW * scale, height: imgH * scale });
         canvas.setBackgroundImage(originalImg, canvas.renderAll.bind(canvas), { scaleX: scale, scaleY: scale });
     }
