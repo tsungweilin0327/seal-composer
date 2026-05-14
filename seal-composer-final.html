@@ -7,24 +7,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
     <style>
         :root { --primary: #007AFF; --accent: #FF3B30; }
-        body { font-family: -apple-system, sans-serif; background: #2c2c2e; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; color: white; }
-        .header { background: #1c1c1e; padding: 15px; z-index: 10; border-bottom: 1px solid #3a3a3c; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, sans-serif; background: #2c2c2e; margin: 0; padding: 0; display: flex; flex-direction: column; min-height: 100vh; color: white; }
+        .header { background: #1c1c1e; padding: 12px 15px; z-index: 10; border-bottom: 1px solid #3a3a3c; }
         .upload-btns { display: flex; gap: 10px; }
         label { flex: 1; background: var(--primary); padding: 12px; border-radius: 8px; cursor: pointer; text-align: center; font-weight: bold; font-size: 14px; }
         label.green { background: #34C759; }
         input[type="file"] { display: none; }
-        #viewport { flex: 1; display: flex; justify-content: center; align-items: center; overflow: auto; padding: 20px; background: radial-gradient(#3a3a3c, #1c1c1e); min-height: 0; }
-        .footer { background: #1c1c1e; padding: 8px 20px env(safe-area-inset-bottom, 8px) 20px; border-top: 1px solid #3a3a3c; flex-shrink: 0; }
-        .tool-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
-        .tool-row span { font-size: 13px; color: #aeaeb2; min-width: 55px; }
+        #viewport { display: flex; justify-content: center; align-items: center; padding: 15px; background: radial-gradient(#3a3a3c, #1c1c1e); }
+        .footer { background: #1c1c1e; padding: 12px 15px 20px 15px; border-top: 1px solid #3a3a3c; }
+        .tool-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+        .tool-row span { font-size: 12px; color: #aeaeb2; min-width: 50px; }
         input[type="range"] { flex: 1; min-width: 80px; }
-        #download-btn { background: var(--accent); color: white; border: none; width: 100%; padding: 12px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        #download-btn { background: var(--accent); color: white; border: none; width: 100%; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: bold; cursor: pointer; margin-top: 4px; }
         .mode-switch { margin-bottom: 8px; display: flex; background: #3a3a3c; border-radius: 8px; padding: 2px; }
-        .mode-btn { flex: 1; padding: 8px; border: none; background: none; color: #aeaeb2; cursor: pointer; font-size: 12px; border-radius: 6px; }
+        .mode-btn { flex: 1; padding: 7px; border: none; background: none; color: #aeaeb2; cursor: pointer; font-size: 12px; border-radius: 6px; }
         .mode-btn.active { background: #636366; color: white; }
-        #apply-color-btn { background: #636366; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
-        #apply-color-btn:active { background: #888; }
-        #status-msg { font-size: 11px; color: #aeaeb2; text-align: center; margin-bottom: 4px; min-height: 16px; }
+        #apply-color-btn { background: #636366; color: white; border: none; padding: 7px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+        #status-msg { font-size: 11px; color: #aeaeb2; text-align: center; margin-bottom: 4px; min-height: 14px; }
     </style>
 </head>
 <body>
@@ -55,7 +55,7 @@
         <span>透明度</span>
         <input type="range" id="opacity-slider" min="0.1" max="1" step="0.1" value="1">
     </div>
-    <button id="download-btn">完成並導出作品</button>
+    <button id="download-btn">✅ 完成並導出作品</button>
 </div>
 
 <script>
@@ -99,10 +99,9 @@
 
     function renderCanvas() {
         if (!originalImg) return;
-        const vW = window.innerWidth - 40;
-        const vH = document.getElementById('viewport').clientHeight - 40;
+        const vW = window.innerWidth - 30;
         const imgW = originalImg.width, imgH = originalImg.height;
-        let scale = (currentMode === 'fit') ? Math.min(vW / imgW, vH / imgH) : vW / imgW;
+        let scale = (currentMode === 'fit') ? vW / imgW : vW / imgW;
         canvas.setDimensions({ width: imgW * scale, height: imgH * scale });
         canvas.setBackgroundImage(originalImg, canvas.renderAll.bind(canvas), { scaleX: scale, scaleY: scale });
     }
